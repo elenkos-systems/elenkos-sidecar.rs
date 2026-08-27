@@ -1,0 +1,28 @@
+[package]
+org = "elenkos-systems"
+name = "elenkos-sidecar"
+version = "0.1.0"
+description = "k8s sidecar for Elenkos Systems."
+license = "MIT"
+keywords = ["sidecar", "observability", "k8s"]
+language = "rust"
+
+[package.repository]
+vcs = "git"
+url = "https://github.com/elenkos-systems/elenkos-sidecar.rs"
+
+[dependencies]
+"ores-otel/ores-otel-sidecar" = "^0.1.0"
+
+[build]
+command = "cargo build --release --locked --bin elenkos-sidecar"
+outputs = ["target/release/elenkos-sidecar"]
+
+[bin]
+elenkos-sidecar = "target/release/elenkos-sidecar"
+
+[install]
+adapter = "none"
+
+[scripts]
+test = "cargo test --all-targets --locked"
