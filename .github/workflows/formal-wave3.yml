@@ -1,0 +1,18 @@
+name: Formal wave 3
+on:
+  pull_request:
+    paths: ['conformance/**', 'Cargo.toml', '.github/workflows/formal-wave3.yml']
+  workflow_dispatch:
+permissions: {contents: read}
+jobs:
+  bounded-model-check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: {persist-credentials: false}
+      - uses: dtolnay/rust-toolchain@4305c38b25d97ef35a8ad1f985ccf2d2242004f2
+        with:
+          toolchain: '1.90.0'
+      - run: cargo test --bin admin-capability-model
+      - run: cargo run --bin admin-capability-model
