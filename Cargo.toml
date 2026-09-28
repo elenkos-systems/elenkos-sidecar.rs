@@ -11,6 +11,10 @@ readme = "README.md"
 name = "elenkos-sidecar"
 path = "src/main.rs"
 
+[[bin]]
+name = "admin-capability-model"
+path = "conformance/admin_capability_model.rs"
+
 [dependencies]
 ores-otel-sidecar = { git = "https://github.com/ores-otel/ores-otel-sidecar.rs", rev = "fed785ad9a638e24d458e0f2acd390624e4e748d" }
 
