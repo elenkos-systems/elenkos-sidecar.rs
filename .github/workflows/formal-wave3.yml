@@ -16,3 +16,4 @@ jobs:
           toolchain: '1.90.0'
       - run: cargo test --bin admin-capability-model
       - run: cargo run --bin admin-capability-model
+      - run: python3 conformance/admin_capability_model.py
