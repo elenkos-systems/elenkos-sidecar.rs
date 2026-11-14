@@ -1,51 +1,74 @@
-fn admitted(authenticated: bool, tenant_scoped: bool, admin: bool, payroll_write: bool) -> bool {
-    !payroll_write || (authenticated && tenant_scoped && admin)
+/// Model only: this does not implement runtime authentication or authorization.
+/// A payroll mutation requires a fresh authenticated session, an explicitly
+/// scoped and matching tenant, and administrator authority.
+#[derive(Clone, Copy)]
+struct PayrollAuthority {
+    authenticated: bool,
+    tenant_scoped: bool,
+    tenant_matches: bool,
+    admin: bool,
+    session_fresh: bool,
+}
+
+fn admitted(authority: PayrollAuthority, payroll_write: bool) -> bool {
+    !payroll_write
+        || (authority.authenticated
+            && authority.tenant_scoped
+            && authority.tenant_matches
+            && authority.admin
+            && authority.session_fresh)
+}
+
+fn authority(bits: u8) -> PayrollAuthority {
+    PayrollAuthority {
+        authenticated: bits & 1 != 0,
+        tenant_scoped: bits & 2 != 0,
+        tenant_matches: bits & 4 != 0,
+        admin: bits & 8 != 0,
+        session_fresh: bits & 16 != 0,
+    }
 }
 
 fn main() {
     let mut checked = 0_u8;
-    for bits in 0_u8..16 {
-        let authenticated = bits & 1 != 0;
-        let tenant_scoped = bits & 2 != 0;
-        let admin = bits & 4 != 0;
-        let payroll_write = bits & 8 != 0;
-
-        let is_admitted = admitted(authenticated, tenant_scoped, admin, payroll_write);
-        if payroll_write && is_admitted {
-            assert!(authenticated && tenant_scoped && admin,
-                "payroll mutation admitted without authenticated tenant admin authority");
-        }
+    // Five authorization predicates plus a read/write operation bit.
+    for bits in 0_u8..64 {
+        let context = authority(bits);
+        let payroll_write = bits & 32 != 0;
+        let allowed = admitted(context, payroll_write);
+        let expected = !payroll_write
+            || (context.authenticated
+                && context.tenant_scoped
+                && context.tenant_matches
+                && context.admin
+                && context.session_fresh);
+        assert_eq!(allowed, expected, "unexpected payroll admission state {bits}");
         checked += 1;
     }
-
-    assert_eq!(checked, 16);
-    println!("admin capability model: {checked} states");
+    assert_eq!(checked, 64);
+    println!("admin payroll capability model: {checked} states");
 }
 
 #[cfg(test)]
 mod tests {
-    use super::admitted;
+    use super::{admitted, authority};
 
     #[test]
-    fn payroll_write_fails_closed_without_full_authority() {
-        for authenticated in [false, true] {
-            for tenant_scoped in [false, true] {
-                for admin in [false, true] {
-                    let expected = authenticated && tenant_scoped && admin;
-                    assert_eq!(admitted(authenticated, tenant_scoped, admin, true), expected);
-                }
-            }
+    fn payroll_mutations_require_all_five_capabilities() {
+        let mut admitted_cases = 0;
+        for bits in 0_u8..32 {
+            let allowed = admitted(authority(bits), true);
+            let expected = bits == 31;
+            assert_eq!(allowed, expected, "unexpected admission state {bits}");
+            admitted_cases += u32::from(allowed);
         }
+        assert_eq!(admitted_cases, 1);
     }
 
     #[test]
-    fn non_payroll_operations_are_outside_this_capability_gate() {
-        for authenticated in [false, true] {
-            for tenant_scoped in [false, true] {
-                for admin in [false, true] {
-                    assert!(admitted(authenticated, tenant_scoped, admin, false));
-                }
-            }
+    fn unprivileged_operations_are_outside_this_payroll_mutation_gate() {
+        for bits in 0_u8..32 {
+            assert!(admitted(authority(bits), false));
         }
     }
 }
